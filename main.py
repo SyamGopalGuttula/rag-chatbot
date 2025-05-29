@@ -4,6 +4,31 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.config import Settings
+import requests
+
+import requests
+
+def generate_answer(query, context, model="mistral"):
+    prompt = f"""You are a helpful AI assistant for company policy questions.
+    Use the context below to answer the user's question. If the answer is not found in the context, say "I don't know."
+
+    ### Context:
+    {context}
+
+    ### Question:
+    {query}
+
+    ### Answer:"""
+
+    response = requests.post(
+        "http://localhost:11434/api/generate",
+        json={"model": model, "prompt": prompt, "stream": False}
+    )
+
+    if response.status_code == 200:
+        return response.json()["response"].strip()
+    else:
+        return "Failed to generate answer from LLM."
 
 def embed_chunks(chunks, model_name="all-MiniLM-L6-v2"):
     model = SentenceTransformer(model_name)
@@ -97,8 +122,11 @@ if __name__ == "__main__":
             sys.exit()
 
         results = query_chromadb(user_input)
-        print("\n Top Results:")
-        for i, doc in enumerate(results["documents"][0]):
-            print(f"\n--- Chunk {i+1} ---")
-            print(doc.strip())
+        top_chunks = results["documents"][0]
+        combined_context = "\n\n".join(top_chunks)
+
+        print("\nGenerating answer from local Mistral...")
+        answer = generate_answer(user_input, combined_context)
+        print("\nAnswer:\n", answer)
+
 
