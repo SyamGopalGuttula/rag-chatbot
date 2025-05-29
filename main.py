@@ -2,6 +2,8 @@ from pathlib import Path
 import fitz #PyMuPDF
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
+import chromadb
+from chromadb.config import Settings
 
 def embed_chunks(chunks, model_name="all-MiniLM-L6-v2"):
     model = SentenceTransformer(model_name)
@@ -11,6 +13,21 @@ def embed_chunks(chunks, model_name="all-MiniLM-L6-v2"):
     for i, emb in enumerate(embeddings):
         chunks[i]["embedding"] = emb  # store embedding in each chunk
     return chunks
+
+import chromadb
+
+def store_in_chromadb(chunks, persist_directory="db"):
+    client = chromadb.PersistentClient(path=persist_directory)
+    collection = client.get_or_create_collection(name="policy_chunks")
+
+    documents = [chunk["content"] for chunk in chunks]
+    ids = [f"{chunk['source']}_{chunk['chunk_id']}" for chunk in chunks]
+    embeddings = [chunk["embedding"] for chunk in chunks]
+    metadatas = [{"source": chunk["source"]} for chunk in chunks]
+
+    collection.add(documents=documents, embeddings=embeddings, ids=ids, metadatas=metadatas)
+    print(f"Stored {len(documents)} chunks in ChromaDB.")
+
 
 
 def load_documents(data_path: str):
@@ -60,5 +77,7 @@ if __name__ == "__main__":
 
     embedded_chunks = embed_chunks(all_chunks)
     print("Embedded chunks successfully.")
-    print(f"Example vector (first chunk):\n{embedded_chunks[0]['embedding'][:10]}")  # preview first 10 values
+
+    store_in_chromadb(embedded_chunks)
+
 
