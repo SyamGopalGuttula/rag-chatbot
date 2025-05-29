@@ -28,7 +28,19 @@ def store_in_chromadb(chunks, persist_directory="db"):
     collection.add(documents=documents, embeddings=embeddings, ids=ids, metadatas=metadatas)
     print(f"Stored {len(documents)} chunks in ChromaDB.")
 
+def query_chromadb(query, model_name="all-MiniLM-L6-v2", persist_directory="db", k=3):
+    model = SentenceTransformer(model_name)
+    query_embedding = model.encode(query)
 
+    client = chromadb.PersistentClient(path=persist_directory)
+    collection = client.get_or_create_collection(name="policy_chunks")
+
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=k
+    )
+
+    return results
 
 def load_documents(data_path: str):
     docs = []
@@ -69,15 +81,24 @@ def extract_text_from_pdf(pdf_path):
     return "\n".join([page.get_text() for page in doc])
 
 if __name__ == "__main__":
-    all_docs = load_documents("data/")
-    print(f"Loaded {len(all_docs)} documents.")
+    import sys
 
-    all_chunks = chunk_documents(all_docs)
-    print(f"Created {len(all_chunks)} chunks.")
+    # If you want to rebuild everything, uncomment this:
+    # all_docs = load_documents("data/")
+    # all_chunks = chunk_documents(all_docs)
+    # embedded_chunks = embed_chunks(all_chunks)
+    # store_in_chromadb(embedded_chunks)
 
-    embedded_chunks = embed_chunks(all_chunks)
-    print("Embedded chunks successfully.")
+    print("Ask a question about the documents (type 'exit' to quit):")
+    while True:
+        user_input = input("\n> ")
+        if user_input.lower() in ["exit", "quit"]:
+            print("Goodbye!")
+            sys.exit()
 
-    store_in_chromadb(embedded_chunks)
-
+        results = query_chromadb(user_input)
+        print("\n Top Results:")
+        for i, doc in enumerate(results["documents"][0]):
+            print(f"\n--- Chunk {i+1} ---")
+            print(doc.strip())
 
