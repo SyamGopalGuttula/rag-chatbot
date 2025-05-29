@@ -1,6 +1,17 @@
 from pathlib import Path
 import fitz #PyMuPDF
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from sentence_transformers import SentenceTransformer
+
+def embed_chunks(chunks, model_name="all-MiniLM-L6-v2"):
+    model = SentenceTransformer(model_name)
+    texts = [chunk["content"] for chunk in chunks]
+    embeddings = model.encode(texts, show_progress_bar=True, convert_to_numpy=True)
+
+    for i, emb in enumerate(embeddings):
+        chunks[i]["embedding"] = emb  # store embedding in each chunk
+    return chunks
+
 
 def load_documents(data_path: str):
     docs = []
@@ -46,5 +57,8 @@ if __name__ == "__main__":
 
     all_chunks = chunk_documents(all_docs)
     print(f"Created {len(all_chunks)} chunks.")
-    print("Preview of first chunk:")
-    print(all_chunks[0]["content"])
+
+    embedded_chunks = embed_chunks(all_chunks)
+    print("Embedded chunks successfully.")
+    print(f"Example vector (first chunk):\n{embedded_chunks[0]['embedding'][:10]}")  # preview first 10 values
+
