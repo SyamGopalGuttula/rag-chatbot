@@ -3,3 +3,4 @@ PyMuPDF
 chromadb
 sentence-transformers
 python-dotenv
+openai
