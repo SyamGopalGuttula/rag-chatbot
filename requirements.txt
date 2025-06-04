@@ -3,4 +3,12 @@ PyMuPDF
 chromadb
 sentence-transformers
 python-dotenv
-openai
+python-docx
+
+# LangChain + RAG components
+langchain
+langchain-huggingface
+langchain-chroma
+langchain-openai
+
+streamlit
